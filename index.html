@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/github.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My GitHub Repositories</title>
+    <meta name="description" content="Showcase of my major GitHub repositories and projects">
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <div class="container">
+          <h1 class="header__title">My GitHub Repositories</h1>
+          <p class="header__subtitle">A showcase of my major projects and contributions</p>
+        </div>
+      </header>
+      
+      <main class="main">
+        <div class="container">
+          <div class="loading" id="loading">
+            <div class="loading__spinner"></div>
+            <p>Fetching repositories...</p>
+          </div>
+          
+          <div class="repos-grid" id="repos-grid"></div>
+          
+          <div class="error" id="error" style="display: none;">
+            <h2>Unable to load repositories</h2>
+            <p>Please check your internet connection and try again.</p>
+          </div>
+        </div>
+      </main>
+      
+      <footer class="footer">
+        <div class="container">
+          <p>&copy; 2025 Built with Vite</p>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
