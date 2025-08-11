@@ -89,7 +89,21 @@ class GitHubRepoShowcase {
       const response = await fetch(`${API_BASE}/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=50`);
       console.log('API response status:', response.status);
       
+      if (response.status === 403) {
+        // Rate limit exceeded
+        this.showError('GitHub API rate limit exceeded. Please try again in about an hour.');
+        return;
+      }
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        
+        if (response.status === 404) {
+          this.showError(`GitHub user "${GITHUB_USERNAME}" not found. Please check the username in main.js`);
+          return;
+        }
+        
         throw new Error(`GitHub API responded with status: ${response.status}`);
       }
 
@@ -180,11 +194,23 @@ class GitHubRepoShowcase {
     this.loadingEl.style.display = 'none';
     this.errorEl.style.display = 'block';
     
+    // Update error message if a custom one is provided
     const errorTitle = this.errorEl.querySelector('h2');
     const errorText = this.errorEl.querySelector('p');
     
-    errorTitle.textContent = 'Unable to Load Repositories';
-    errorText.textContent = message;
+    if (message.includes('rate limit')) {
+      errorTitle.textContent = 'Rate Limit Exceeded';
+      errorText.textContent = 'GitHub API rate limit exceeded. Please try again in about an hour.';
+    } else if (message.includes('not found')) {
+      errorTitle.textContent = 'User Not Found';
+      errorText.textContent = message;
+    } else if (message.includes('No public repositories')) {
+      errorTitle.textContent = 'No Repositories';
+      errorText.textContent = message;
+    } else {
+      errorTitle.textContent = 'Unable to Load Repositories';
+      errorText.textContent = message || 'Please check your internet connection and try again.';
+    }
   }
 }
 
