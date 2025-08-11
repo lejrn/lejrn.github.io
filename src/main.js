@@ -56,6 +56,23 @@ const getLanguageIcon = (language) => {
   return `<span class="language-dot" style="background-color: ${color}"></span>`;
 };
 
+// Request throttling and caching configuration
+let lastFetchTime = 0;
+const FETCH_COOLDOWN = 30000; // 30 seconds between fetches
+const CACHE_KEY = 'github_repos_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Debugging - track page loads and API requests
+window.addEventListener('load', () => {
+  console.log(`🌟 Page loaded at: ${new Date().toISOString()}`);
+  console.log(`🌟 User agent: ${navigator.userAgent}`);
+  console.log(`🌟 Referrer: ${document.referrer}`);
+});
+
+window.addEventListener('beforeunload', () => {
+  console.log(`👋 Page unloading at: ${new Date().toISOString()}`);
+});
+
 // Utility functions
 const formatNumber = (num) => {
   if (num >= 1000) {
@@ -84,6 +101,26 @@ class GitHubRepoShowcase {
 
   async loadRepositories() {
     console.log('Loading repositories for:', GITHUB_USERNAME);
+    
+    // Check if we should throttle requests
+    const now = Date.now();
+    if (now - lastFetchTime < FETCH_COOLDOWN) {
+      console.log('🚫 Skipping fetch - too recent (throttled)');
+      return;
+    }
+    
+    // Check cache first
+    const cachedData = this.getCachedData();
+    if (cachedData) {
+      console.log('📦 Using cached data for repositories');
+      this.hideLoading();
+      this.renderRepositories(cachedData);
+      return;
+    }
+    
+    lastFetchTime = now;
+    console.log(`🔍 Making fresh API request at: ${new Date().toISOString()}`);
+    console.log(`🔍 Total API requests in session: ${++window.apiRequestCount || (window.apiRequestCount = 1)}`);
     
     try {
       const response = await fetch(`${API_BASE}/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=50`);
@@ -134,6 +171,9 @@ class GitHubRepoShowcase {
 
       this.hideLoading();
       this.renderRepositories(reposWithLanguages);
+      
+      // Cache the result
+      this.setCacheData(reposWithLanguages);
     } catch (error) {
       console.error('Error loading repositories:', error);
       this.showError('Unable to load repositories. Please check your internet connection and try again.');
@@ -278,6 +318,51 @@ class GitHubRepoShowcase {
       errorText.textContent = message || 'Please check your internet connection and try again.';
     }
   }
+  
+  // Caching functions
+  getCachedData() {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) {
+      console.log('📦 No cache found');
+      return null;
+    }
+    
+    try {
+      const { timestamp, data } = JSON.parse(cached);
+      const now = Date.now();
+      const timeLeft = CACHE_DURATION - (now - timestamp);
+      
+      // Check if cache is still valid
+      if (timeLeft > 0) {
+        console.log(`📦 Using cached data (expires in ${Math.round(timeLeft / 1000)}s)`);
+        return data;
+      }
+      
+      console.log('📦 Cache expired, will fetch fresh data');
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    } catch (error) {
+      console.warn('⚠️ Cache parse error:', error);
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+  }
+
+  setCacheData(data) {
+    const cacheEntry = {
+      timestamp: Date.now(),
+      data
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
+    console.log(`💾 Data cached at ${new Date().toISOString()} (${data.length} repositories)`);
+    console.log(`💾 Cache will expire at ${new Date(Date.now() + CACHE_DURATION).toISOString()}`);
+  }
+  
+  // Debug helper - clear cache (can be called from browser console)
+  clearCache() {
+    localStorage.removeItem(CACHE_KEY);
+    console.log('🗑️ Cache cleared');
+  }
 }
 
 // Initialize the application when DOM is loaded
@@ -293,5 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  new GitHubRepoShowcase();
+  // Make the showcase instance globally accessible for debugging
+  window.githubShowcase = new GitHubRepoShowcase();
+  console.log('🔧 Debug helpers available: window.githubShowcase.clearCache()');
 });
