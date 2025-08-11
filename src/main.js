@@ -129,12 +129,48 @@ class GitHubRepoShowcase {
         return;
       }
 
+      // Try to fetch languages, but don't fail if we can't
+      const reposWithLanguages = await this.fetchLanguagesForRepos(filteredRepos);
+
       this.hideLoading();
-      this.renderRepositories(filteredRepos);
+      this.renderRepositories(reposWithLanguages);
     } catch (error) {
       console.error('Error loading repositories:', error);
       this.showError('Unable to load repositories. Please check your internet connection and try again.');
     }
+  }
+
+  async fetchLanguagesForRepos(repos) {
+    const repoPromises = repos.map(async (repo) => {
+      try {
+        const langResponse = await fetch(`${API_BASE}/repos/${GITHUB_USERNAME}/${repo.name}/languages`);
+        
+        if (langResponse.status === 403) {
+          // Rate limit hit, just use the primary language
+          console.warn(`Rate limit hit for languages of ${repo.name}, using primary language only`);
+          return repo;
+        }
+        
+        if (langResponse.ok) {
+          const languages = await langResponse.json();
+          // Convert to array and sort by bytes of code
+          const languageArray = Object.entries(languages)
+            .map(([name, bytes]) => ({ name, bytes }))
+            .sort((a, b) => b.bytes - a.bytes);
+          
+          return {
+            ...repo,
+            allLanguages: languageArray
+          };
+        }
+        return repo; // Return original repo if language fetch fails
+      } catch (error) {
+        console.warn(`Failed to fetch languages for ${repo.name}:`, error);
+        return repo; // Return original repo if language fetch fails
+      }
+    });
+
+    return Promise.all(repoPromises);
   }
 
   renderRepositories(repos) {
@@ -149,6 +185,17 @@ class GitHubRepoShowcase {
   createRepoCard(repo) {
     const description = repo.description || 'No description available';
     const topics = repo.topics || [];
+    const allLanguages = repo.allLanguages || [];
+    
+    // Calculate total bytes and percentages
+    const totalBytes = allLanguages.reduce((sum, lang) => sum + lang.bytes, 0);
+    const languagesWithPercentages = allLanguages.map(lang => ({
+      ...lang,
+      percentage: totalBytes > 0 ? ((lang.bytes / totalBytes) * 100).toFixed(1) : 0
+    }));
+    
+    // Show top 5 languages by bytes of code
+    const topLanguages = languagesWithPercentages.slice(0, 5);
     
     return `
       <article class="repo-card">
@@ -164,13 +211,32 @@ class GitHubRepoShowcase {
         <p class="repo-card__description">${description}</p>
         
         <div class="repo-card__meta">
-          ${repo.language ? `
+          ${topLanguages.length > 0 ? `
+            <div class="repo-card__languages">
+              <div class="languages-label">Tech Stack</div>
+              <div class="languages-list">
+                ${topLanguages.map(lang => `
+                  <div class="language-item">
+                    <span class="language-icon">${getLanguageIcon(lang.name)}</span>
+                    <span class="language-name">${lang.name}</span>
+                    <span class="language-percentage">${lang.percentage}%</span>
+                  </div>
+                `).join('')}
+                ${allLanguages.length > 5 ? `
+                  <div class="language-item language-more">
+                    <span class="language-name">+${allLanguages.length - 5} more</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          ` : repo.language ? `
             <div class="repo-card__languages">
               <div class="languages-label">Tech Stack</div>
               <div class="languages-list">
                 <div class="language-item">
                   <span class="language-icon">${getLanguageIcon(repo.language)}</span>
                   <span class="language-name">${repo.language}</span>
+                  <span class="language-percentage">100%</span>
                 </div>
               </div>
             </div>
