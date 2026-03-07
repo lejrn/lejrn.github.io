@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "fetch-data": "node scripts/fetch-repos.js",
+    "build": "node scripts/fetch-repos.js && vite build",
+    "build:only": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {

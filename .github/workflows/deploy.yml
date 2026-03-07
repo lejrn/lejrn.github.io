@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main, master ]
+  # Refresh repo data weekly — Monday at 06:00 UTC
+  schedule:
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -24,14 +27,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Build
+      - name: Fetch GitHub data & Build
         run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Setup Pages
         uses: actions/configure-pages@v4

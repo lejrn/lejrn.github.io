@@ -1,0 +1,229 @@
+{
+  "fetchedAt": "2026-03-07T23:36:45.729Z",
+  "username": "lejrn",
+  "repos": [
+    {
+      "name": "flood-fill-cuda",
+      "description": "Showcase of flood fill with BFS using CUDA",
+      "html_url": "https://github.com/lejrn/flood-fill-cuda",
+      "language": "Python",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2025-06-29T03:57:41Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "Python",
+          "bytes": 233869,
+          "percentage": "78.1",
+          "color": "#3572A5"
+        },
+        {
+          "name": "Jupyter Notebook",
+          "bytes": 62348,
+          "percentage": "20.8",
+          "color": "#586069"
+        },
+        {
+          "name": "Shell",
+          "bytes": 3212,
+          "percentage": "1.1",
+          "color": "#89e051"
+        }
+      ]
+    },
+    {
+      "name": "mini-openran-lab",
+      "description": "A kind cluster running in WSL spins up the full srsRAN stack - gNB, loopback UE, Near-RT RIC and a custom xApp - via a single Helm chart, while Prometheus + Grafana expose real-time metrics without any RF hardware",
+      "html_url": "https://github.com/lejrn/mini-openran-lab",
+      "language": "Python",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2025-06-12T14:26:18Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "Python",
+          "bytes": 86106,
+          "percentage": "63.3",
+          "color": "#3572A5"
+        },
+        {
+          "name": "Shell",
+          "bytes": 25862,
+          "percentage": "19.0",
+          "color": "#89e051"
+        },
+        {
+          "name": "RobotFramework",
+          "bytes": 9645,
+          "percentage": "7.1",
+          "color": "#586069"
+        },
+        {
+          "name": "HCL",
+          "bytes": 5729,
+          "percentage": "4.2",
+          "color": "#586069"
+        },
+        {
+          "name": "Makefile",
+          "bytes": 3174,
+          "percentage": "2.3",
+          "color": "#427819"
+        },
+        {
+          "name": "Dockerfile",
+          "bytes": 2923,
+          "percentage": "2.1",
+          "color": "#384d54"
+        },
+        {
+          "name": "Smarty",
+          "bytes": 2583,
+          "percentage": "1.9",
+          "color": "#586069"
+        }
+      ]
+    },
+    {
+      "name": "5g-phy-ci-pipeline",
+      "description": "A Docker-packaged Python simulator (NumPy/SciPy) generates OFDM frames, adds noise, decodes with Turbo/LDPC, and - via PyTest-driven GitHub Actions - automatically reports BER",
+      "html_url": "https://github.com/lejrn/5g-phy-ci-pipeline",
+      "language": "HTML",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2025-06-12T13:58:33Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "HTML",
+          "bytes": 469790,
+          "percentage": "86.7",
+          "color": "#e34c26"
+        },
+        {
+          "name": "Python",
+          "bytes": 36749,
+          "percentage": "6.8",
+          "color": "#3572A5"
+        },
+        {
+          "name": "Shell",
+          "bytes": 24551,
+          "percentage": "4.5",
+          "color": "#89e051"
+        },
+        {
+          "name": "RobotFramework",
+          "bytes": 9683,
+          "percentage": "1.8",
+          "color": "#586069"
+        },
+        {
+          "name": "Dockerfile",
+          "bytes": 1170,
+          "percentage": "0.2",
+          "color": "#384d54"
+        }
+      ]
+    },
+    {
+      "name": "stm32-freertos-blinker",
+      "description": "Dual-rate LED blinker demonstrating FreeRTOS multitasking on STM32F103C8T6 Blue Pill with comprehensive unit testing and CI/CD",
+      "html_url": "https://github.com/lejrn/stm32-freertos-blinker",
+      "language": "C",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2025-05-23T23:55:06Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "C",
+          "bytes": 17130,
+          "percentage": "63.8",
+          "color": "#555555"
+        },
+        {
+          "name": "Shell",
+          "bytes": 3984,
+          "percentage": "14.8",
+          "color": "#89e051"
+        },
+        {
+          "name": "CMake",
+          "bytes": 3565,
+          "percentage": "13.3",
+          "color": "#586069"
+        },
+        {
+          "name": "Linker Script",
+          "bytes": 2191,
+          "percentage": "8.2",
+          "color": "#586069"
+        }
+      ]
+    },
+    {
+      "name": "analyze-eye-tracking-data",
+      "description": "A Python pipeline for analyzing pupillary light reflex data from eye-tracking tests.",
+      "html_url": "https://github.com/lejrn/analyze-eye-tracking-data",
+      "language": "Jupyter Notebook",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2025-04-27T08:29:55Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "Jupyter Notebook",
+          "bytes": 38685777,
+          "percentage": "100.0",
+          "color": "#586069"
+        }
+      ]
+    },
+    {
+      "name": "Reconstructing-Dark-Images",
+      "description": "Reconstruct dark images using Neural Networks",
+      "html_url": "https://github.com/lejrn/Reconstructing-Dark-Images",
+      "language": "Jupyter Notebook",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2022-08-13T00:28:24Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "Jupyter Notebook",
+          "bytes": 4502525,
+          "percentage": "100.0",
+          "color": "#586069"
+        }
+      ]
+    },
+    {
+      "name": "fastai-RawPy",
+      "description": "`fastai-rawpy` lets fast.ai framework support RawPy package",
+      "html_url": "https://github.com/lejrn/fastai-RawPy",
+      "language": "Python",
+      "stargazers_count": 0,
+      "forks_count": 0,
+      "topics": [],
+      "updated_at": "2022-08-13T00:01:39Z",
+      "private": false,
+      "allLanguages": [
+        {
+          "name": "Python",
+          "bytes": 34792,
+          "percentage": "100.0",
+          "color": "#3572A5"
+        }
+      ]
+    }
+  ]
+}
