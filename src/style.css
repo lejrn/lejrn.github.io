@@ -387,6 +387,7 @@ body::before {
 /* ── Sparkline ───────────────────────────────────────────────── */
 
 .card__sparkline {
+  max-width: 380px;
   margin-bottom: 0.75rem;
 }
 

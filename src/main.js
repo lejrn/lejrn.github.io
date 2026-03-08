@@ -329,6 +329,7 @@ class GitHubShowcase {
     const langs = (repo.allLanguages || []).slice(0, 4);
     const topics = (repo.topics || []).slice(0, 4);
     const weeks = repo.weeklyCommits || [];
+    const hasActivity = weeks.length > 0 && weeks.some(v => v > 0);
     const hasReadme = repo.readmeExcerpt && repo.readmeExcerpt.length > 0;
 
     return `
@@ -348,7 +349,7 @@ class GitHubShowcase {
 
           <p class="card__desc">${repo.description}</p>
 
-          ${weeks.length > 0 ? `
+          ${hasActivity ? `
             <div class="card__sparkline">
               ${renderSparkline(weeks, neonColor)}
               <span class="sparkline__label">commit activity</span>
