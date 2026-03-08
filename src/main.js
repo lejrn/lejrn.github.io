@@ -41,21 +41,60 @@ const DESC_THRESHOLD = 120;
 
 function renderSparkline(weeks, neonColor) {
   if (!weeks || weeks.length === 0) return '';
-  const w = 120, h = 28, pad = 2;
+  const w = 200, h = 40, pad = 2;
   const max = Math.max(...weeks, 1);
-  const points = weeks.map((v, i) => {
-    const x = pad + (i / (weeks.length - 1)) * (w - pad * 2);
-    const y = h - pad - (v / max) * (h - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  // Fill area under curve
-  const areaPoints = [`${pad},${h - pad}`, ...points, `${w - pad},${h - pad}`].join(' ');
+  const pts = weeks.map((v, i) => ({
+    x: pad + (i / (weeks.length - 1)) * (w - pad * 2),
+    y: h - pad - (v / max) * (h - pad * 2)
+  }));
+
+  // Build smooth cubic bezier path (monotone spline)
+  const d = smoothPath(pts);
+
+  // Area fill: path → bottom-right → bottom-left → close
+  const last = pts[pts.length - 1];
+  const first = pts[0];
+  const areaD = `${d} L ${last.x.toFixed(1)},${(h - pad).toFixed(1)} L ${first.x.toFixed(1)},${(h - pad).toFixed(1)} Z`;
+
   return `
     <svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <polygon points="${areaPoints}" fill="${neonColor}" opacity="0.08"/>
-      <polyline points="${points.join(' ')}" fill="none" stroke="${neonColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+      <path d="${areaD}" fill="${neonColor}" opacity="0.08"/>
+      <path d="${d}" fill="none" stroke="${neonColor}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
     </svg>
   `;
+}
+
+// Monotone cubic Hermite spline for smooth, overshoot-free curves
+function smoothPath(pts) {
+  if (pts.length < 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+
+  // Compute tangent slopes (monotone method)
+  const n = pts.length;
+  const dx = [], dy = [], m = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(pts[i + 1].x - pts[i].x);
+    dy.push(pts[i + 1].y - pts[i].y);
+    m.push(dy[i] / dx[i]);
+  }
+
+  const tangents = [m[0]];
+  for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1] * m[i] <= 0) tangents.push(0);
+    else tangents.push(2 / (1 / m[i - 1] + 1 / m[i]));
+  }
+  tangents.push(m[n - 2]);
+
+  // Build cubic segments
+  let d = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const seg = dx[i] / 3;
+    const cp1x = pts[i].x + seg;
+    const cp1y = pts[i].y + tangents[i] * seg;
+    const cp2x = pts[i + 1].x - seg;
+    const cp2y = pts[i + 1].y - tangents[i + 1] * seg;
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${pts[i + 1].x.toFixed(1)},${pts[i + 1].y.toFixed(1)}`;
+  }
+  return d;
 }
 
 // ── Main Application ──────────────────────────────────────────────
@@ -312,7 +351,7 @@ class GitHubShowcase {
           ${weeks.length > 0 ? `
             <div class="card__sparkline">
               ${renderSparkline(weeks, neonColor)}
-              <span class="sparkline__label">52-week activity</span>
+              <span class="sparkline__label">commit activity</span>
             </div>
           ` : ''}
 
@@ -339,14 +378,14 @@ class GitHubShowcase {
               ${topics.map(t => `<span class="topic">${t}</span>`).join('')}
             </div>
           ` : ''}
-        </div>
 
-        ${hasReadme ? `
-          <div class="card__readme">
-            <div class="readme__label">README</div>
-            <p class="readme__text">${repo.readmeExcerpt}</p>
-          </div>
-        ` : ''}
+          ${hasReadme ? `
+            <div class="card__readme">
+              <div class="readme__label">README</div>
+              <p class="readme__text">${repo.readmeExcerpt}</p>
+            </div>
+          ` : ''}
+        </div>
       </article>
     `;
   }

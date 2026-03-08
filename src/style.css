@@ -6,7 +6,7 @@
   --surface: rgba(255, 255, 255, 0.02);
   --border: rgba(255, 255, 255, 0.06);
   --text: #e4e4e7;
-  --text-dim: #71717a;
+  --text-dim: #a1a1aa;
   --text-muted: #52525b;
   --radius: 12px;
 
@@ -280,6 +280,7 @@ body::before {
   border-radius: var(--radius);
   padding: 1.5rem;
   position: relative;
+  align-self: start;
   opacity: 0;
   transform: translateY(16px);
   transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.1s ease, box-shadow 0.1s ease;
@@ -316,7 +317,6 @@ body::before {
 .card__inner {
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .card__header {
@@ -392,7 +392,7 @@ body::before {
 
 .sparkline {
   width: 100%;
-  height: 28px;
+  height: 40px;
   display: block;
 }
 
@@ -417,7 +417,7 @@ body::before {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.78rem;
-  color: var(--text-dim);
+  color: #a1a1aa;
 }
 
 .lang__dot {
@@ -428,7 +428,7 @@ body::before {
 }
 
 .lang__pct {
-  color: var(--text-muted);
+  color: #8a8a96;
   font-size: 0.72rem;
 }
 

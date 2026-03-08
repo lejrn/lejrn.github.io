@@ -134,17 +134,22 @@ async function fetchRepos() {
   return reposWithData;
 }
 
-// Fetch commit sparkline (52 weeks) and README excerpt per repo
+// Fetch full-lifetime commit sparkline and README excerpt per repo
 async function fetchExtras(repoName) {
   const extras = { weeklyCommits: [], readmeExcerpt: '' };
 
-  // Participation stats (52-week array of owner commit counts)
+  // Contributors stats — full repo lifetime weekly commits for the owner
   try {
-    const stats = await fetchWithRetry(
-      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/stats/participation`
+    const contributors = await fetchWithRetry(
+      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/stats/contributors`
     );
-    if (stats && stats.owner) {
-      extras.weeklyCommits = stats.owner; // array of 52 ints
+    if (Array.isArray(contributors)) {
+      const owner = contributors.find(
+        c => c.author && c.author.login.toLowerCase() === GITHUB_USERNAME.toLowerCase()
+      );
+      if (owner && owner.weeks) {
+        extras.weeklyCommits = owner.weeks.map(w => w.c); // full lifetime array of commit counts
+      }
     }
   } catch (err) {
     console.warn(`  Sparkline data unavailable for ${repoName}: ${err.message}`);
