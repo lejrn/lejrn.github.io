@@ -47,10 +47,11 @@ const LANGUAGE_COLORS = {
 import { writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
-async function fetchWithRetry(url, retries = 3) {
+async function fetchWithRetry(url, retries = 3, raw = false) {
   for (let i = 0; i < retries; i++) {
     try {
       const headers = { 'User-Agent': 'github-pages-builder' };
+      if (raw) headers['Accept'] = 'application/vnd.github.v3.raw';
       // Use GITHUB_TOKEN if available (higher rate limit: 5000/hr vs 60/hr)
       if (process.env.GITHUB_TOKEN) {
         headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -61,7 +62,9 @@ async function fetchWithRetry(url, retries = 3) {
         await new Promise(r => setTimeout(r, 10000));
         continue;
       }
+      if (response.status === 404) return null;
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (raw) return await response.text();
       return await response.json();
     } catch (err) {
       if (i === retries - 1) throw err;
@@ -122,12 +125,56 @@ async function fetchRepos() {
         topics: repo.topics || [],
         updated_at: repo.updated_at,
         private: repo.private,
-        allLanguages
+        allLanguages,
+        ...(await fetchExtras(repo.name))
       };
     })
   );
 
   return reposWithData;
+}
+
+// Fetch commit sparkline (52 weeks) and README excerpt per repo
+async function fetchExtras(repoName) {
+  const extras = { weeklyCommits: [], readmeExcerpt: '' };
+
+  // Participation stats (52-week array of owner commit counts)
+  try {
+    const stats = await fetchWithRetry(
+      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/stats/participation`
+    );
+    if (stats && stats.owner) {
+      extras.weeklyCommits = stats.owner; // array of 52 ints
+    }
+  } catch (err) {
+    console.warn(`  Sparkline data unavailable for ${repoName}: ${err.message}`);
+  }
+
+  // README raw text — grab first ~300 chars
+  try {
+    const raw = await fetchWithRetry(
+      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/readme`,
+      2,
+      true
+    );
+    if (raw) {
+      // Strip markdown headers, badges, images, HTML tags
+      const cleaned = raw
+        .replace(/!\[.*?\]\(.*?\)/g, '')       // images
+        .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '') // badge links
+        .replace(/<[^>]+>/g, '')               // HTML tags
+        .replace(/#{1,6}\s*/g, '')             // headings
+        .replace(/\*\*|__|~~|`/g, '')          // bold/italic/code
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
+        .replace(/\n{2,}/g, '\n')             // collapse blank lines
+        .trim();
+      extras.readmeExcerpt = cleaned.slice(0, 300);
+    }
+  } catch (err) {
+    console.warn(`  README unavailable for ${repoName}: ${err.message}`);
+  }
+
+  return extras;
 }
 
 async function main() {

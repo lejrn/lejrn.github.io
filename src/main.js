@@ -35,6 +35,29 @@ const LANGUAGE_COLORS = {
 
 const getLanguageColor = (lang) => LANGUAGE_COLORS[lang] || LANGUAGE_COLORS.default;
 
+const DESC_THRESHOLD = 120;
+
+// ── Sparkline SVG Generator ───────────────────────────────────────
+
+function renderSparkline(weeks, neonColor) {
+  if (!weeks || weeks.length === 0) return '';
+  const w = 120, h = 28, pad = 2;
+  const max = Math.max(...weeks, 1);
+  const points = weeks.map((v, i) => {
+    const x = pad + (i / (weeks.length - 1)) * (w - pad * 2);
+    const y = h - pad - (v / max) * (h - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  // Fill area under curve
+  const areaPoints = [`${pad},${h - pad}`, ...points, `${w - pad},${h - pad}`].join(' ');
+  return `
+    <svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <polygon points="${areaPoints}" fill="${neonColor}" opacity="0.08"/>
+      <polyline points="${points.join(' ')}" fill="none" stroke="${neonColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+    </svg>
+  `;
+}
+
 // ── Main Application ──────────────────────────────────────────────
 
 class GitHubShowcase {
@@ -43,6 +66,11 @@ class GitHubShowcase {
     this.loadingEl = document.getElementById('loading');
     this.errorEl = document.getElementById('error');
     this.updatedEl = document.getElementById('last-updated');
+    this.toolbarEl = document.getElementById('toolbar');
+    this.allRepos = [];
+    this.currentSort = 'stars';
+    this.activeLanguages = new Set();
+    this.expandedCard = null;
     this.init();
   }
 
@@ -50,8 +78,10 @@ class GitHubShowcase {
     try {
       const data = await this.loadData();
       if (data) {
+        this.allRepos = data.repos;
         this.hideLoading();
-        this.renderRepositories(data.repos);
+        this.buildToolbar();
+        this.renderCards();
         this.showLastUpdated(data.fetchedAt);
       }
     } catch (err) {
@@ -90,7 +120,6 @@ class GitHubShowcase {
       .sort((a, b) => b.stargazers_count - a.stargazers_count || new Date(b.updated_at) - new Date(a.updated_at))
       .slice(0, 12);
 
-    // Attempt language fetch (best-effort)
     const enriched = await Promise.all(filtered.map(async (repo) => {
       try {
         const lr = await fetch(`${API_BASE}/repos/${GITHUB_USERNAME}/${repo.name}/languages`);
@@ -115,50 +144,177 @@ class GitHubShowcase {
         forks_count: repo.forks_count,
         topics: repo.topics || [],
         updated_at: repo.updated_at,
-        allLanguages: repo.allLanguages || []
+        allLanguages: repo.allLanguages || [],
+        weeklyCommits: [],
+        readmeExcerpt: ''
       };
     }));
 
     return { fetchedAt: new Date().toISOString(), username: GITHUB_USERNAME, repos: enriched };
   }
 
-  // ── Rendering ─────────────────────────────────────────────────
+  // ── Toolbar: Sort + Filter ────────────────────────────────────
 
-  renderRepositories(repos) {
-    if (!repos.length) { this.showError('No repositories found'); return; }
+  buildToolbar() {
+    // Collect all unique languages across all repos
+    const langSet = new Set();
+    this.allRepos.forEach(r => {
+      (r.allLanguages || []).forEach(l => langSet.add(l.name));
+      if (r.language && !langSet.size) langSet.add(r.language);
+    });
+    const languages = [...langSet].sort();
 
-    // Cards with long descriptions get the wider "featured" size
-    // ~120 chars is roughly what fits in 3 lines at default card width
-    const DESC_THRESHOLD = 120;
+    this.toolbarEl.innerHTML = `
+      <div class="toolbar__sort">
+        <button class="sort-btn sort-btn--active" data-sort="stars">Most starred</button>
+        <button class="sort-btn" data-sort="updated">Recently updated</button>
+        <button class="sort-btn" data-sort="alpha">A — Z</button>
+      </div>
+      <div class="toolbar__filter">
+        <button class="filter-toggle" id="filter-toggle">
+          <span class="filter-toggle__icon">⚙</span> Language
+          <span class="filter-toggle__count" id="filter-count"></span>
+        </button>
+        <div class="filter-dropdown" id="filter-dropdown">
+          ${languages.map(lang => `
+            <label class="filter-option">
+              <input type="checkbox" value="${lang}" class="filter-checkbox" />
+              <span class="filter-dot" style="background: ${getLanguageColor(lang)}"></span>
+              ${lang}
+            </label>
+          `).join('')}
+          <button class="filter-clear" id="filter-clear">Clear all</button>
+        </div>
+      </div>
+    `;
+    this.toolbarEl.style.display = '';
+
+    // Sort buttons
+    this.toolbarEl.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.toolbarEl.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('sort-btn--active'));
+        btn.classList.add('sort-btn--active');
+        this.currentSort = btn.dataset.sort;
+        this.renderCards();
+      });
+    });
+
+    // Filter dropdown toggle
+    const toggle = document.getElementById('filter-toggle');
+    const dropdown = document.getElementById('filter-dropdown');
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('filter-dropdown--open');
+    });
+    document.addEventListener('click', () => dropdown.classList.remove('filter-dropdown--open'));
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    // Filter checkboxes
+    this.toolbarEl.querySelectorAll('.filter-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) this.activeLanguages.add(cb.value);
+        else this.activeLanguages.delete(cb.value);
+        this.updateFilterCount();
+        this.renderCards();
+      });
+    });
+
+    // Clear all filters
+    document.getElementById('filter-clear').addEventListener('click', () => {
+      this.activeLanguages.clear();
+      this.toolbarEl.querySelectorAll('.filter-checkbox').forEach(c => c.checked = false);
+      this.updateFilterCount();
+      this.renderCards();
+    });
+  }
+
+  updateFilterCount() {
+    const el = document.getElementById('filter-count');
+    if (this.activeLanguages.size > 0) {
+      el.textContent = this.activeLanguages.size;
+      el.style.display = 'inline-flex';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // ── Sort + Filter + Render ────────────────────────────────────
+
+  getFilteredSortedRepos() {
+    let repos = [...this.allRepos];
+
+    // Filter by language
+    if (this.activeLanguages.size > 0) {
+      repos = repos.filter(r => {
+        const repoLangs = (r.allLanguages || []).map(l => l.name);
+        if (r.language) repoLangs.push(r.language);
+        return repoLangs.some(l => this.activeLanguages.has(l));
+      });
+    }
+
+    // Sort
+    switch (this.currentSort) {
+      case 'stars':
+        repos.sort((a, b) => b.stargazers_count - a.stargazers_count || new Date(b.updated_at) - new Date(a.updated_at));
+        break;
+      case 'updated':
+        repos.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        break;
+      case 'alpha':
+        repos.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    return repos;
+  }
+
+  renderCards() {
+    const repos = this.getFilteredSortedRepos();
+
+    if (!repos.length) {
+      this.gridEl.innerHTML = '<p class="no-results">No repos match the current filters.</p>';
+      return;
+    }
+
     this.gridEl.innerHTML = repos.map((repo, i) => {
       const featured = (repo.description || '').length > DESC_THRESHOLD;
       const neon = NEON_COLORS[i % NEON_COLORS.length];
       return this.createCard(repo, featured, neon, i);
     }).join('');
 
-    // Intersection Observer for staggered fade-in
     this.observeCards();
+    this.bindCardClicks();
   }
 
   createCard(repo, featured, neonColor, index) {
     const langs = (repo.allLanguages || []).slice(0, 4);
     const topics = (repo.topics || []).slice(0, 4);
+    const weeks = repo.weeklyCommits || [];
+    const hasReadme = repo.readmeExcerpt && repo.readmeExcerpt.length > 0;
 
     return `
       <article
-        class="card${featured ? ' card--featured' : ''}"
+        class="card${featured ? ' card--featured' : ''}${hasReadme ? ' card--expandable' : ''}"
         style="--neon: ${neonColor}; --delay: ${index * 0.08}s"
         data-animate
+        data-repo="${repo.name}"
       >
         <div class="card__inner">
           <div class="card__header">
-            <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="card__name">
-              ${repo.name}
+            <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="card__name" onclick="event.stopPropagation()">
+              ${repo.name} <span class="card__arrow">↗</span>
             </a>
             ${repo.stargazers_count > 0 ? `<span class="card__stars">★ ${repo.stargazers_count}</span>` : ''}
           </div>
 
           <p class="card__desc">${repo.description}</p>
+
+          ${weeks.length > 0 ? `
+            <div class="card__sparkline">
+              ${renderSparkline(weeks, neonColor)}
+              <span class="sparkline__label">52-week activity</span>
+            </div>
+          ` : ''}
 
           ${langs.length > 0 ? `
             <div class="card__langs">
@@ -184,9 +340,40 @@ class GitHubShowcase {
             </div>
           ` : ''}
         </div>
+
+        ${hasReadme ? `
+          <div class="card__readme">
+            <div class="readme__label">README</div>
+            <p class="readme__text">${repo.readmeExcerpt}</p>
+          </div>
+        ` : ''}
       </article>
     `;
   }
+
+  // ── Card click → expand README ────────────────────────────────
+
+  bindCardClicks() {
+    this.gridEl.querySelectorAll('.card--expandable').forEach(card => {
+      card.addEventListener('click', (e) => {
+        // Don't expand if they clicked a link
+        if (e.target.closest('a')) return;
+        const name = card.dataset.repo;
+
+        if (this.expandedCard === name) {
+          card.classList.remove('card--expanded');
+          this.expandedCard = null;
+        } else {
+          // Collapse previous
+          this.gridEl.querySelectorAll('.card--expanded').forEach(c => c.classList.remove('card--expanded'));
+          card.classList.add('card--expanded');
+          this.expandedCard = name;
+        }
+      });
+    });
+  }
+
+  // ── Observers + Helpers ───────────────────────────────────────
 
   observeCards() {
     const observer = new IntersectionObserver((entries) => {

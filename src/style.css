@@ -74,6 +74,162 @@ body::before {
   color: var(--text-muted);
 }
 
+/* ── Toolbar: Sort + Language Filter ─────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0 1.5rem;
+  flex-wrap: wrap;
+}
+
+.toolbar__sort {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+.sort-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sort-btn:hover {
+  color: var(--text-dim);
+}
+
+.sort-btn--active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.toolbar__filter {
+  position: relative;
+}
+
+.filter-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.filter-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+.filter-toggle__icon {
+  font-size: 0.9rem;
+}
+
+.filter-toggle__count {
+  display: none;
+  background: #00ffff;
+  color: #08080f;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: #12121e;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-width: 180px;
+  max-height: 280px;
+  overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  z-index: 100;
+}
+
+.filter-dropdown--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.filter-option:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.filter-checkbox {
+  accent-color: #00ffff;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.filter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.filter-clear {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: inherit;
+  padding: 0.5rem 0 0.25rem;
+  margin-top: 0.4rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.filter-clear:hover {
+  color: var(--text);
+}
+
 /* ── Loading ─────────────────────────────────────────────────── */
 
 .loading {
@@ -96,13 +252,23 @@ body::before {
   to { transform: rotate(360deg); }
 }
 
+/* ── No Results ──────────────────────────────────────────────── */
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 /* ── Bento Grid ──────────────────────────────────────────────── */
 
 .repos-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
-  padding: 1rem 0 4rem;
+  padding: 0 0 4rem;
 }
 
 /* ── Card — Neon Wireframe ───────────────────────────────────── */
@@ -135,7 +301,12 @@ body::before {
     inset 0 0 12px color-mix(in srgb, var(--neon) 4%, transparent);
 }
 
-/* Bento: first two cards span 2 columns */
+/* Expandable cursor hint */
+.card--expandable {
+  cursor: pointer;
+}
+
+/* Bento: wide cards for long descriptions */
 .card--featured {
   grid-column: span 2;
 }
@@ -162,6 +333,23 @@ body::before {
   color: var(--text);
   text-decoration: none;
   transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.card__arrow {
+  font-size: 0.8rem;
+  opacity: 0;
+  transform: translate(-2px, -1px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  color: var(--neon);
+}
+
+.card__name:hover .card__arrow,
+.card:hover .card__arrow {
+  opacity: 1;
+  transform: translate(0, -1px);
 }
 
 .card__name:hover {
@@ -194,6 +382,25 @@ body::before {
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1;
+}
+
+/* ── Sparkline ───────────────────────────────────────────────── */
+
+.card__sparkline {
+  margin-bottom: 0.75rem;
+}
+
+.sparkline {
+  width: 100%;
+  height: 28px;
+  display: block;
+}
+
+.sparkline__label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.15rem;
 }
 
 /* ── Languages ───────────────────────────────────────────────── */
@@ -247,6 +454,46 @@ body::before {
   color: var(--text-dim);
 }
 
+/* ── README Expand ───────────────────────────────────────────── */
+
+.card__readme {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.35s ease;
+  margin-top: 0;
+}
+
+.card--expanded .card__readme {
+  max-height: 300px;
+  opacity: 1;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.readme__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.4rem;
+}
+
+.readme__text {
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+  white-space: pre-line;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── Error ───────────────────────────────────────────────────── */
 
 .error {
@@ -286,6 +533,18 @@ body::before {
 @media (max-width: 600px) {
   .container { padding: 0 1rem; }
   .header { padding: 3rem 0 1.5rem; }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .toolbar__sort {
+    justify-content: center;
+  }
+  .toolbar__filter {
+    align-self: flex-end;
+  }
 
   .repos-grid {
     grid-template-columns: 1fr;
