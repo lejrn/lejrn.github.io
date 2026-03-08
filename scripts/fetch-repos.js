@@ -163,14 +163,15 @@ async function fetchExtras(repoName) {
       true
     );
     if (raw) {
-      // Strip markdown headers, badges, images, HTML tags
+      // Strip markdown formatting to plain text
       const cleaned = raw
+        .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '') // badge links (before images)
         .replace(/!\[.*?\]\(.*?\)/g, '')       // images
-        .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '') // badge links
         .replace(/<[^>]+>/g, '')               // HTML tags
         .replace(/#{1,6}\s*/g, '')             // headings
-        .replace(/\*\*|__|~~|`/g, '')          // bold/italic/code
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text
+        .replace(/\*\*|__|~~|`{1,3}/g, '')     // bold/italic/code
+        .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1') // links → text (incl. empty [])
+        .replace(/https?:\/\/\S+/g, '')        // bare URLs
         .replace(/\n{2,}/g, '\n')             // collapse blank lines
         .trim();
       extras.readmeExcerpt = cleaned.slice(0, 300);

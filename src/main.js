@@ -330,7 +330,15 @@ class GitHubShowcase {
     const topics = (repo.topics || []).slice(0, 4);
     const weeks = repo.weeklyCommits || [];
     const hasActivity = weeks.length > 0 && weeks.some(v => v > 0);
-    const hasReadme = repo.readmeExcerpt && repo.readmeExcerpt.length > 0;
+    // Clean any remaining markdown artifacts from the excerpt
+    let readmeText = (repo.readmeExcerpt || '')
+      .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')  // badge links
+      .replace(/!\[.*?\]\(.*?\)/g, '')               // images
+      .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$1')     // [text](url) → text
+      .replace(/https?:\/\/\S+/g, '')                 // bare URLs
+      .replace(/\n{2,}/g, '\n')                       // collapse blanks
+      .trim();
+    const hasReadme = readmeText.length > 0;
 
     return `
       <article
@@ -383,7 +391,7 @@ class GitHubShowcase {
           ${hasReadme ? `
             <div class="card__readme">
               <div class="readme__label">README</div>
-              <p class="readme__text">${repo.readmeExcerpt}</p>
+              <p class="readme__text">${readmeText}</p>
             </div>
           ` : ''}
         </div>
