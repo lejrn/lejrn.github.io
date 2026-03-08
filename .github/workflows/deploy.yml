@@ -1,11 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [ main, master ]
-  # Refresh repo data weekly — Monday at 06:00 UTC
+  # Rebuild and redeploy once a week — Monday at 06:00 UTC
   schedule:
     - cron: '0 6 * * 1'
+  # Allow manual trigger from the GitHub Actions UI
   workflow_dispatch:
 
 permissions:
