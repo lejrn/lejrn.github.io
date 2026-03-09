@@ -139,20 +139,64 @@ async function fetchExtras(repoName) {
   const extras = { weeklyCommits: [], readmeExcerpt: '' };
 
   // Contributors stats — full repo lifetime weekly commits for the owner
+  // Note: GitHub returns 202 Accepted on first request while computing stats.
+  // We must retry after a delay to get the actual data.
   try {
-    const contributors = await fetchWithRetry(
-      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/stats/contributors`
-    );
-    if (Array.isArray(contributors)) {
+    let contributors = null;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const headers = { 'User-Agent': 'github-pages-builder' };
+      if (process.env.GITHUB_TOKEN) {
+        headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+      }
+      const res = await fetch(
+        `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/stats/contributors`,
+        { headers }
+      );
+      if (res.status === 200) {
+        contributors = await res.json();
+        break;
+      } else if (res.status === 202) {
+        console.log(`  Stats computing for ${repoName}, retrying in 5s... (${attempt + 1}/8)`);
+        await new Promise(r => setTimeout(r, 5000));
+      } else {
+        break;
+      }
+    }
+    if (Array.isArray(contributors) && contributors.length > 0) {
+      // Try to find the owner first
       const owner = contributors.find(
         c => c.author && c.author.login.toLowerCase() === GITHUB_USERNAME.toLowerCase()
       );
       if (owner && owner.weeks) {
-        extras.weeklyCommits = owner.weeks.map(w => w.c); // full lifetime array of commit counts
+        extras.weeklyCommits = owner.weeks.map(w => w.c);
+      } else {
+        // Owner not linked — sum all contributors' weekly commits
+        const weekCount = contributors[0].weeks.length;
+        const summed = new Array(weekCount).fill(0);
+        for (const c of contributors) {
+          if (c.weeks) {
+            c.weeks.forEach((w, i) => { summed[i] += w.c; });
+          }
+        }
+        extras.weeklyCommits = summed;
       }
     }
   } catch (err) {
     console.warn(`  Sparkline data unavailable for ${repoName}: ${err.message}`);
+  }
+
+  // Fallback: if /stats/contributors didn't yield data, use /commits API
+  if (extras.weeklyCommits.length === 0 || extras.weeklyCommits.every(c => c === 0)) {
+    try {
+      console.log(`  Using /commits fallback for ${repoName}...`);
+      const allCommits = await fetchAllCommits(repoName);
+      if (allCommits.length > 0) {
+        extras.weeklyCommits = bucketCommitsByWeek(allCommits);
+        console.log(`  Fallback: ${allCommits.length} commits → ${extras.weeklyCommits.length} weeks`);
+      }
+    } catch (err) {
+      console.warn(`  /commits fallback failed for ${repoName}: ${err.message}`);
+    }
   }
 
   // README raw text — grab first ~300 chars
@@ -181,6 +225,56 @@ async function fetchExtras(repoName) {
   }
 
   return extras;
+}
+
+// Fetch all commits via paginated /commits API (up to 500)
+async function fetchAllCommits(repoName) {
+  const commits = [];
+  let page = 1;
+  const perPage = 100;
+  const maxPages = 5; // cap at 500 commits
+  while (page <= maxPages) {
+    const url = `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/commits?per_page=${perPage}&page=${page}`;
+    const batch = await fetchWithRetry(url);
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    commits.push(...batch);
+    if (batch.length < perPage) break;
+    page++;
+  }
+  return commits;
+}
+
+// Bucket commits by ISO week → array of weekly counts (oldest first)
+function bucketCommitsByWeek(commits) {
+  if (commits.length === 0) return [];
+  // Extract dates (author date preferred, fall back to committer date)
+  const dates = commits.map(c => {
+    const d = c.commit?.author?.date || c.commit?.committer?.date;
+    return d ? new Date(d) : null;
+  }).filter(Boolean);
+  if (dates.length === 0) return [];
+
+  // Find min/max date
+  const minDate = new Date(Math.min(...dates));
+  const maxDate = new Date(Math.max(...dates));
+
+  // Align minDate to start of its week (Sunday)
+  const startOfWeek = new Date(minDate);
+  startOfWeek.setUTCHours(0, 0, 0, 0);
+  startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+
+  // Calculate total weeks
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const totalWeeks = Math.ceil((maxDate - startOfWeek) / msPerWeek) + 1;
+  const weeks = new Array(totalWeeks).fill(0);
+
+  for (const d of dates) {
+    const weekIdx = Math.floor((d - startOfWeek) / msPerWeek);
+    if (weekIdx >= 0 && weekIdx < totalWeeks) {
+      weeks[weekIdx]++;
+    }
+  }
+  return weeks;
 }
 
 async function main() {

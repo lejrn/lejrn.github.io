@@ -40,8 +40,18 @@ const DESC_THRESHOLD = 120;
 // ── Sparkline SVG Generator ───────────────────────────────────────
 
 function renderSparkline(weeks, neonColor) {
-  if (!weeks || weeks.length === 0) return '';
   const w = 200, h = 40, pad = 2;
+
+  // If no data or all zeros, render a flatline
+  if (!weeks || weeks.length === 0 || !weeks.some(v => v > 0)) {
+    const y = h - pad;
+    return `
+      <svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="${neonColor}" stroke-width="1" opacity="0.2"/>
+      </svg>
+    `;
+  }
+
   const max = Math.max(...weeks, 1);
   const pts = weeks.map((v, i) => ({
     x: pad + (i / (weeks.length - 1)) * (w - pad * 2),
@@ -316,85 +326,82 @@ class GitHubShowcase {
     }
 
     this.gridEl.innerHTML = repos.map((repo, i) => {
-      const featured = (repo.description || '').length > DESC_THRESHOLD;
       const neon = NEON_COLORS[i % NEON_COLORS.length];
-      return this.createCard(repo, featured, neon, i);
+      return this.createCard(repo, neon, i);
     }).join('');
 
     this.observeCards();
     this.bindCardClicks();
   }
 
-  createCard(repo, featured, neonColor, index) {
-    const langs = (repo.allLanguages || []).slice(0, 4);
-    const topics = (repo.topics || []).slice(0, 4);
+  createCard(repo, neonColor, index) {
+    const langs = (repo.allLanguages || []).slice(0, 6);
     const weeks = repo.weeklyCommits || [];
-    const hasActivity = weeks.length > 0 && weeks.some(v => v > 0);
     // Clean any remaining markdown artifacts from the excerpt
     let readmeText = (repo.readmeExcerpt || '')
-      .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')  // badge links
-      .replace(/!\[.*?\]\(.*?\)/g, '')               // images
-      .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$1')     // [text](url) → text
-      .replace(/https?:\/\/\S+/g, '')                 // bare URLs
-      .replace(/\n{2,}/g, '\n')                       // collapse blanks
+      .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\n{2,}/g, '\n')
       .trim();
     const hasReadme = readmeText.length > 0;
 
+    // Build language bar segments
+    const langBar = langs.length > 0 ? `
+      <div class="card__lang-bar">
+        ${langs.map(l => `<div class="lang-bar__seg" style="width: ${l.percentage}%; background: ${l.color}" title="${l.name} ${l.percentage}%"></div>`).join('')}
+      </div>
+    ` : '';
+
+    // Language bullets
+    const langBullets = langs.length > 0 ? `
+      <div class="card__langs">
+        ${langs.map(l => `
+          <span class="lang" style="--lang-color: ${l.color}">
+            <span class="lang__dot" style="background: ${l.color}"></span>
+            ${l.name} <span class="lang__pct">${l.percentage}%</span>
+          </span>
+        `).join('')}
+      </div>
+    ` : repo.language ? `
+      <div class="card__langs">
+        <span class="lang" style="--lang-color: ${getLanguageColor(repo.language)}">
+          <span class="lang__dot" style="background: ${getLanguageColor(repo.language)}"></span>
+          ${repo.language}
+        </span>
+      </div>
+    ` : '';
+
     return `
       <article
-        class="card${featured ? ' card--featured' : ''}${hasReadme ? ' card--expandable' : ''}"
+        class="card${hasReadme ? ' card--expandable' : ''}"
         style="--neon: ${neonColor}; --delay: ${index * 0.08}s"
         data-animate
         data-repo="${repo.name}"
       >
-        <div class="card__inner">
-          <div class="card__header">
+        <div class="card__row">
+          <div class="card__left">
             <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="card__name" onclick="event.stopPropagation()">
               ${repo.name} <span class="card__arrow">↗</span>
             </a>
-            ${repo.stargazers_count > 0 ? `<span class="card__stars">★ ${repo.stargazers_count}</span>` : ''}
+            <p class="card__desc">${repo.description}</p>
+            ${langBar}
+            ${langBullets}
           </div>
-
-          <p class="card__desc">${repo.description}</p>
-
-          ${hasActivity ? `
+          <div class="card__right">
             <div class="card__sparkline">
               ${renderSparkline(weeks, neonColor)}
-              <span class="sparkline__label">commit activity</span>
             </div>
-          ` : ''}
-
-          ${langs.length > 0 ? `
-            <div class="card__langs">
-              ${langs.map(l => `
-                <span class="lang" style="--lang-color: ${l.color}">
-                  <span class="lang__dot" style="background: ${l.color}"></span>
-                  ${l.name} <span class="lang__pct">${l.percentage}%</span>
-                </span>
-              `).join('')}
-            </div>
-          ` : repo.language ? `
-            <div class="card__langs">
-              <span class="lang" style="--lang-color: ${getLanguageColor(repo.language)}">
-                <span class="lang__dot" style="background: ${getLanguageColor(repo.language)}"></span>
-                ${repo.language}
-              </span>
-            </div>
-          ` : ''}
-
-          ${topics.length > 0 ? `
-            <div class="card__topics">
-              ${topics.map(t => `<span class="topic">${t}</span>`).join('')}
-            </div>
-          ` : ''}
-
-          ${hasReadme ? `
-            <div class="card__readme">
-              <div class="readme__label">README</div>
-              <p class="readme__text">${readmeText}</p>
-            </div>
-          ` : ''}
+          </div>
         </div>
+
+        ${hasReadme ? `
+          <div class="card__readme">
+            <div class="readme__label">README</div>
+            <p class="readme__text">${readmeText}</p>
+          </div>
+        ` : ''}
       </article>
     `;
   }
