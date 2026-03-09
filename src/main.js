@@ -39,7 +39,7 @@ const DESC_THRESHOLD = 120;
 
 // ── Sparkline SVG Generator ───────────────────────────────────────
 
-function renderSparkline(weeks, neonColor) {
+function renderSparkline(weeks) {
   const w = 200, h = 40, pad = 2;
 
   // If no data or all zeros, render a flatline
@@ -47,7 +47,7 @@ function renderSparkline(weeks, neonColor) {
     const y = h - pad;
     return `
       <svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-        <line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="${neonColor}" stroke-width="1" opacity="0.2"/>
+        <line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="currentColor" stroke-width="1" class="sparkline__flat"/>
       </svg>
     `;
   }
@@ -68,8 +68,8 @@ function renderSparkline(weeks, neonColor) {
 
   return `
     <svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <path d="${areaD}" fill="${neonColor}" opacity="0.08"/>
-      <path d="${d}" fill="none" stroke="${neonColor}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+      <path class="sparkline__area" d="${areaD}" fill="currentColor"/>
+      <path class="sparkline__line" d="${d}" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
 }
@@ -195,7 +195,7 @@ class GitHubShowcase {
         updated_at: repo.updated_at,
         allLanguages: repo.allLanguages || [],
         weeklyCommits: [],
-        readmeExcerpt: ''
+        readmeHtml: ''
       };
     }));
 
@@ -337,15 +337,8 @@ class GitHubShowcase {
   createCard(repo, neonColor, index) {
     const langs = (repo.allLanguages || []).slice(0, 6);
     const weeks = repo.weeklyCommits || [];
-    // Clean any remaining markdown artifacts from the excerpt
-    let readmeText = (repo.readmeExcerpt || '')
-      .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')
-      .replace(/!\[.*?\]\(.*?\)/g, '')
-      .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$1')
-      .replace(/https?:\/\/\S+/g, '')
-      .replace(/\n{2,}/g, '\n')
-      .trim();
-    const hasReadme = readmeText.length > 0;
+    const readmeHtml = repo.readmeHtml || '';
+    const hasReadme = readmeHtml.length > 0;
 
     // Build language bar segments
     const langBar = langs.length > 0 ? `
@@ -391,7 +384,7 @@ class GitHubShowcase {
           </div>
           <div class="card__right">
             <div class="card__sparkline">
-              ${renderSparkline(weeks, neonColor)}
+              ${renderSparkline(weeks)}
             </div>
           </div>
         </div>
@@ -399,7 +392,7 @@ class GitHubShowcase {
         ${hasReadme ? `
           <div class="card__readme">
             <div class="readme__label">README</div>
-            <p class="readme__text">${readmeText}</p>
+            <div class="readme__body markdown-body">${readmeHtml}</div>
           </div>
         ` : ''}
       </article>

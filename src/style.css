@@ -385,18 +385,45 @@ body::before {
   color: color-mix(in srgb, var(--neon) 45%, var(--text-dim));
   text-shadow: 0 0 12px color-mix(in srgb, var(--neon) 15%, transparent);
 }
-}
 
 /* ── Sparkline ───────────────────────────────────────────────── */
 
 .card__sparkline {
   width: 100%;
+  color: var(--text-muted);
+  transition: color 0.25s ease;
+}
+
+.card:hover .card__sparkline {
+  color: var(--neon);
 }
 
 .sparkline {
   width: 100%;
   height: 32px;
   display: block;
+}
+
+.sparkline__flat {
+  opacity: 0.35;
+}
+
+.sparkline__area {
+  opacity: 0.06;
+  transition: opacity 0.25s ease;
+}
+
+.card:hover .sparkline__area {
+  opacity: 0.12;
+}
+
+.sparkline__line {
+  opacity: 0.45;
+  transition: opacity 0.25s ease;
+}
+
+.card:hover .sparkline__line {
+  opacity: 0.7;
 }
 
 /* ── Language Bar ────────────────────────────────────────────── */
@@ -458,11 +485,12 @@ body::before {
 }
 
 .card--expanded .card__readme {
-  max-height: 300px;
+  max-height: 600px;
   opacity: 1;
   margin-top: 1rem;
   border-top: 1px solid var(--border);
   padding-top: 0.75rem;
+  overflow-y: auto;
 }
 
 .readme__label {
@@ -474,18 +502,146 @@ body::before {
   margin-bottom: 0.4rem;
 }
 
-.readme__text {
-  font-size: 0.82rem;
+/* ── GitHub-flavored Markdown Body ────────────────────────────── */
+
+.readme__body.markdown-body {
+  font-size: 0.85rem;
   line-height: 1.7;
   color: var(--text-dim);
-  white-space: pre-line;
   word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 8;
-  line-clamp: 8;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
 }
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  color: var(--text);
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+.markdown-body h1 { font-size: 1.4rem; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+.markdown-body h2 { font-size: 1.15rem; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+.markdown-body h3 { font-size: 1rem; }
+.markdown-body h4 { font-size: 0.9rem; }
+
+.markdown-body p {
+  margin-bottom: 0.75em;
+}
+
+.markdown-body a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.15em;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--border);
+  padding: 0.25em 1em;
+  margin: 0.5em 0;
+  color: var(--text-muted);
+}
+
+.markdown-body blockquote p {
+  margin-bottom: 0;
+}
+
+.markdown-body code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.markdown-body pre {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85em 1em;
+  margin: 0.75em 0;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.82rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.4em 0.75em;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Hide GitHub anchor links and badge images */
+.markdown-body .anchor { display: none; }
+.markdown-body .markdown-heading { display: block; }
+.markdown-body img[alt="CI"],
+.markdown-body img[src*="badge"],
+.markdown-body img[src*="shields.io"] { display: none; }
 
 /* ── Error ───────────────────────────────────────────────────── */
 

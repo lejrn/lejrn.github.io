@@ -136,7 +136,7 @@ async function fetchRepos() {
 
 // Fetch full-lifetime commit sparkline and README excerpt per repo
 async function fetchExtras(repoName, createdAt) {
-  const extras = { weeklyCommits: [], readmeExcerpt: '' };
+  const extras = { weeklyCommits: [], readmeHtml: '' };
 
   // Contributors stats — full repo lifetime weekly commits for the owner
   // Note: GitHub returns 202 Accepted on first request while computing stats.
@@ -199,26 +199,24 @@ async function fetchExtras(repoName, createdAt) {
     }
   }
 
-  // README raw text — grab first ~300 chars
+  // README as rendered HTML from GitHub API
   try {
-    const raw = await fetchWithRetry(
-      `${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/readme`,
-      2,
-      true
-    );
-    if (raw) {
-      // Strip markdown formatting to plain text
-      const cleaned = raw
-        .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '') // badge links (before images)
-        .replace(/!\[.*?\]\(.*?\)/g, '')       // images
-        .replace(/<[^>]+>/g, '')               // HTML tags
-        .replace(/#{1,6}\s*/g, '')             // headings
-        .replace(/\*\*|__|~~|`{1,3}/g, '')     // bold/italic/code
-        .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1') // links → text (incl. empty [])
-        .replace(/https?:\/\/\S+/g, '')        // bare URLs
-        .replace(/\n{2,}/g, '\n')             // collapse blank lines
-        .trim();
-      extras.readmeExcerpt = cleaned.slice(0, 300);
+    const headers = { 'User-Agent': 'github-pages-builder', 'Accept': 'application/vnd.github.v3.html' };
+    if (process.env.GITHUB_TOKEN) {
+      headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+    const res = await fetch(`${API_BASE}/repos/${GITHUB_USERNAME}/${repoName}/readme`, { headers });
+    if (res.ok) {
+      let html = await res.text();
+      // Strip the outer wrapper div, keep the article content
+      const articleMatch = html.match(/<article[^>]*>([\s\S]*)<\/article>/);
+      if (articleMatch) html = articleMatch[1];
+      // Truncate to ~5000 chars, cutting at a tag boundary to keep valid HTML
+      if (html.length > 5000) {
+        const cut = html.lastIndexOf('<', 5000);
+        html = html.slice(0, cut > 0 ? cut : 5000);
+      }
+      extras.readmeHtml = html.trim();
     }
   } catch (err) {
     console.warn(`  README unavailable for ${repoName}: ${err.message}`);
