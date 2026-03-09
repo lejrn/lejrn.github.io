@@ -126,7 +126,7 @@ async function fetchRepos() {
         updated_at: repo.updated_at,
         private: repo.private,
         allLanguages,
-        ...(await fetchExtras(repo.name))
+        ...(await fetchExtras(repo.name, repo.created_at))
       };
     })
   );
@@ -135,7 +135,7 @@ async function fetchRepos() {
 }
 
 // Fetch full-lifetime commit sparkline and README excerpt per repo
-async function fetchExtras(repoName) {
+async function fetchExtras(repoName, createdAt) {
   const extras = { weeklyCommits: [], readmeExcerpt: '' };
 
   // Contributors stats — full repo lifetime weekly commits for the owner
@@ -191,7 +191,7 @@ async function fetchExtras(repoName) {
       console.log(`  Using /commits fallback for ${repoName}...`);
       const allCommits = await fetchAllCommits(repoName);
       if (allCommits.length > 0) {
-        extras.weeklyCommits = bucketCommitsByWeek(allCommits);
+        extras.weeklyCommits = bucketCommitsByWeek(allCommits, createdAt);
         console.log(`  Fallback: ${allCommits.length} commits → ${extras.weeklyCommits.length} weeks`);
       }
     } catch (err) {
@@ -245,7 +245,8 @@ async function fetchAllCommits(repoName) {
 }
 
 // Bucket commits by ISO week → array of weekly counts (oldest first)
-function bucketCommitsByWeek(commits) {
+// Spans from repo creation date to now (like /stats/contributors does)
+function bucketCommitsByWeek(commits, createdAt) {
   if (commits.length === 0) return [];
   // Extract dates (author date preferred, fall back to committer date)
   const dates = commits.map(c => {
@@ -254,9 +255,10 @@ function bucketCommitsByWeek(commits) {
   }).filter(Boolean);
   if (dates.length === 0) return [];
 
-  // Find min/max date
-  const minDate = new Date(Math.min(...dates));
-  const maxDate = new Date(Math.max(...dates));
+  // Span from repo creation (or earliest commit) to now
+  const earliestCommit = new Date(Math.min(...dates));
+  const minDate = createdAt ? new Date(Math.min(new Date(createdAt), earliestCommit)) : earliestCommit;
+  const maxDate = new Date(); // now, not last commit
 
   // Align minDate to start of its week (Sunday)
   const startOfWeek = new Date(minDate);
