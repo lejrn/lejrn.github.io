@@ -140,10 +140,11 @@ async function fetchExtras(repoName, createdAt) {
 
   // Contributors stats — full repo lifetime weekly commits for the owner
   // Note: GitHub returns 202 Accepted on first request while computing stats.
-  // We must retry after a delay to get the actual data.
+  // It can also return 200 with an empty array if stats aren't ready yet.
+  // We retry on both cases to ensure we get actual data.
   try {
     let contributors = null;
-    for (let attempt = 0; attempt < 8; attempt++) {
+    for (let attempt = 0; attempt < 10; attempt++) {
       const headers = { 'User-Agent': 'github-pages-builder' };
       if (process.env.GITHUB_TOKEN) {
         headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -153,12 +154,23 @@ async function fetchExtras(repoName, createdAt) {
         { headers }
       );
       if (res.status === 200) {
-        contributors = await res.json();
-        break;
-      } else if (res.status === 202) {
-        console.log(`  Stats computing for ${repoName}, retrying in 5s... (${attempt + 1}/8)`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          contributors = data;
+          break;
+        }
+        // 200 but empty array — stats not ready yet, retry
+        console.log(`  Stats empty for ${repoName}, retrying in 5s... (${attempt + 1}/10)`);
         await new Promise(r => setTimeout(r, 5000));
+      } else if (res.status === 202) {
+        console.log(`  Stats computing for ${repoName}, retrying in 5s... (${attempt + 1}/10)`);
+        await new Promise(r => setTimeout(r, 5000));
+      } else if (res.status === 204) {
+        // 204 No Content — repo has no stats (e.g. empty or unlinked authors)
+        console.log(`  Stats returned 204 (no content) for ${repoName}`);
+        break;
       } else {
+        console.log(`  Stats endpoint returned ${res.status} for ${repoName}`);
         break;
       }
     }
@@ -168,7 +180,10 @@ async function fetchExtras(repoName, createdAt) {
         c => c.author && c.author.login.toLowerCase() === GITHUB_USERNAME.toLowerCase()
       );
       if (owner && owner.weeks) {
-        extras.weeklyCommits = owner.weeks.map(w => w.c);
+        const commits = owner.weeks.map(w => w.c);
+        const total = commits.reduce((a, b) => a + b, 0);
+        extras.weeklyCommits = commits;
+        console.log(`  ${repoName}: ${commits.length} weeks, ${total} commits (owner)`);
       } else {
         // Owner not linked — sum all contributors' weekly commits
         const weekCount = contributors[0].weeks.length;
@@ -178,8 +193,12 @@ async function fetchExtras(repoName, createdAt) {
             c.weeks.forEach((w, i) => { summed[i] += w.c; });
           }
         }
+        const total = summed.reduce((a, b) => a + b, 0);
         extras.weeklyCommits = summed;
+        console.log(`  ${repoName}: ${summed.length} weeks, ${total} commits (all contributors)`);
       }
+    } else {
+      console.log(`  ${repoName}: no contributor stats available`);
     }
   } catch (err) {
     console.warn(`  Sparkline data unavailable for ${repoName}: ${err.message}`);
@@ -217,6 +236,9 @@ async function fetchExtras(repoName, createdAt) {
         html = html.slice(0, cut > 0 ? cut : 5000);
       }
       extras.readmeHtml = html.trim();
+      console.log(`  ${repoName}: README ${extras.readmeHtml.length} chars`);
+    } else {
+      console.log(`  ${repoName}: README fetch returned ${res.status}`);
     }
   } catch (err) {
     console.warn(`  README unavailable for ${repoName}: ${err.message}`);
