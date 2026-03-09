@@ -288,7 +288,7 @@ body::before {
 
 .card--visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 /* Neon border + glow on hover */
@@ -485,7 +485,7 @@ body::before {
 }
 
 .card--expanded .card__readme {
-  max-height: 600px;
+  max-height: 800px;
   opacity: 1;
   margin-top: 1rem;
   border-top: 1px solid var(--border);
@@ -500,6 +500,20 @@ body::before {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 0.4rem;
+}
+
+.readme__more {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #58a6ff;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.readme__more:hover {
+  color: #79b8ff;
+  text-decoration: underline;
 }
 
 /* ── GitHub-flavored Markdown Body ────────────────────────────── */

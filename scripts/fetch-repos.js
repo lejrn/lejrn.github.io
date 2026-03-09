@@ -230,10 +230,10 @@ async function fetchExtras(repoName, createdAt) {
       // Strip the outer wrapper div, keep the article content
       const articleMatch = html.match(/<article[^>]*>([\s\S]*)<\/article>/);
       if (articleMatch) html = articleMatch[1];
-      // Truncate to ~5000 chars, cutting at a tag boundary to keep valid HTML
-      if (html.length > 5000) {
-        const cut = html.lastIndexOf('<', 5000);
-        html = html.slice(0, cut > 0 ? cut : 5000);
+      // Truncate to ~15000 chars, cutting at a tag boundary to keep valid HTML
+      if (html.length > 15000) {
+        const cut = html.lastIndexOf('<', 15000);
+        html = html.slice(0, cut > 0 ? cut : 15000);
       }
       extras.readmeHtml = html.trim();
       console.log(`  ${repoName}: README ${extras.readmeHtml.length} chars`);

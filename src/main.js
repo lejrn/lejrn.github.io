@@ -330,6 +330,15 @@ class GitHubShowcase {
       return this.createCard(repo, neon, i);
     }).join('');
 
+    // Inject each README HTML separately via DOM to prevent
+    // unclosed tags from leaking between cards
+    for (const repo of repos) {
+      if (repo.readmeHtml) {
+        const el = this.gridEl.querySelector(`[data-readme-for="${repo.name}"]`);
+        if (el) el.innerHTML = repo.readmeHtml;
+      }
+    }
+
     this.observeCards();
     this.bindCardClicks();
   }
@@ -392,7 +401,8 @@ class GitHubShowcase {
         ${hasReadme ? `
           <div class="card__readme">
             <div class="readme__label">README</div>
-            <div class="readme__body markdown-body">${readmeHtml}</div>
+            <div class="readme__body markdown-body" data-readme-for="${repo.name}"></div>
+            <a href="${repo.html_url}#readme" target="_blank" rel="noopener noreferrer" class="readme__more" onclick="event.stopPropagation()">Read more on GitHub &rarr;</a>
           </div>
         ` : ''}
       </article>
